@@ -1,0 +1,120 @@
+# =============================================================================
+# Domain: Telephony
+# Entity: Call
+# Description: A call detail record (CDR) against a party — a communication-adjacent log. A provider posts
+# the call (a webhook, at-least-once) and it is DEDUPED on (company, external_id); its outcome + duration
+# are recorded, it is linked to what it concerns (a lead/issue) via a polymorphic logical reference, and a
+# `CallLogged` (or `MissedCall`) event is published for CRM/support to attach a callback/note. Posts NO GL.
+# =============================================================================
+
+models:
+  - name: Call
+    collection: calls
+    description: "A call detail record against a party (inbound/outbound), with outcome + duration"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique call id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Org owner # logical FK to organization.Company.id"
+      direction:
+        type: CallDirection
+        attributes: ["@required"]
+        description: "inbound (from the party) | outbound (to the party)"
+      from_number:
+        type: string
+        attributes: ["@required", "@length(max=40)"]
+        description: "Caller number (E.164)"
+      to_number:
+        type: string
+        attributes: ["@required", "@length(max=40)"]
+        description: "Callee number (E.164)"
+      party_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "The external counterpart # logical FK to party.Party.id"
+      agent_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "The internal agent who handled the call # logical FK to sapiens.User.id"
+      status:
+        type: CallStatus
+        attributes: ["@required", "@default(ringing)"]
+        description: "ringing → answered → completed | missed | failed"
+      external_id:
+        type: string?
+        attributes: ["@length(max=200)", "@exclude_from_foreign_key_check"]
+        description: "Provider CDR id — dedups the provider webhook"
+      subject_type:
+        type: string?
+        attributes: ["@length(max=60)"]
+        description: "What this call concerns (lead | issue) — polymorphic logical ref"
+      subject_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "The concerned object # logical FK keyed by subject_type"
+      started_at:
+        type: datetime
+        attributes: ["@required", "@default(now)"]
+        description: "When the call started (ring)"
+      answered_at:
+        type: datetime?
+        description: "When the call was answered (null if never answered)"
+      ended_at:
+        type: datetime?
+        description: "When the call ended"
+      duration_seconds:
+        type: integer
+        attributes: ["@default(0)"]
+        description: "Talk time in seconds (answered→ended); 0 for a missed/unanswered call"
+      recording_url:
+        type: string?
+        attributes: ["@length(max=500)"]
+        description: "Optional recording URL"
+      notes:
+        type: string?
+        attributes: ["@length(max=2000)"]
+        description: "Agent notes / disposition"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      # Provider CDR ids are unique per company — the dedup guard (NULLs distinct, so a manually-logged
+      # call without a provider id never collides).
+      - type: unique
+        fields: [company_id, external_id]
+      - type: index
+        fields: [company_id, party_id]
+      - type: index
+        fields: [subject_type, subject_id]
+      - type: index
+        fields: [status]
+
+enums:
+  - name: CallDirection
+    description: "Call direction relative to us"
+    variants:
+      - name: inbound
+        description: "From the external party to us"
+        default: true
+      - name: outbound
+        description: "From us to the external party"
+
+  - name: CallStatus
+    description: "Call lifecycle / outcome"
+    variants:
+      - name: ringing
+        description: "In progress, not yet answered"
+        default: true
+      - name: answered
+        description: "Answered, in conversation"
+      - name: completed
+        description: "Answered and ended normally"
+      - name: missed
+        description: "Rang but never answered (inbound)"
+      - name: failed
+        description: "Could not connect (busy/rejected/error)"
