@@ -11,7 +11,8 @@ use std::sync::Arc;
 
 // Import handlers
 use crate::presentation::http::{
-    create_call_routes
+    create_call_routes,
+    create_call_read_routes
 };
 
 // Import AppState for stateful routes
@@ -36,6 +37,16 @@ use crate::handlers::AppState;
 pub fn create_stateless_routes(module: &crate::TelephonyModule) -> Router<()> {
     Router::new()
         .merge(create_call_routes(module.call_service.clone()))
+}
+
+/// Read-only routes for the Telephony module — every entity mounted READ-ONLY (the guarded base).
+///
+/// The generic `create_stateless_routes` exposes full mutable CRUD with no domain
+/// validation; this exposes only reads, so generic mutation can't bypass a write
+/// service's invariants. Extend it: `create_readonly_telephony_routes(m).merge(my_validated_writes)`.
+pub fn create_readonly_telephony_routes(module: &crate::TelephonyModule) -> Router<()> {
+    Router::new()
+        .merge(create_call_read_routes(module.call_service.clone()))
 }
 
 /// Get all routes (stateless) for the Telephony module.
