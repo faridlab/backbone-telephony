@@ -11,6 +11,12 @@
 # Add your hand-authored services, handlers, tests, and docs below as you write them.
 
 user_owned:
+  - "src/application/service/telephony_events.rs"
+  - "src/application/service/telephony_write_service.rs"
+  - "tests/integrity_probes.rs"
+  - "tests/telephony_crm_seam.rs"
+  - "tests/telephony_golden_cases.rs"
+  - "scripts/**"
   # Hand-authored behavior (services + their HTTP surface). Examples:
   # - "src/application/service/onboarding_service.rs"
   # - "src/presentation/http/guarded_routes.rs"
