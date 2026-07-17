@@ -5,6 +5,7 @@
 //! A completed call publishes `CallLogged`; an unanswered inbound call publishes `MissedCall` (a callback
 //! signal). The routing event is staged in the SAME tx as the call insert (durable). Posts NO GL.
 
+use backbone_orm::company_scope;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -69,13 +70,21 @@ impl TelephonyWriteService {
             return Err(TelephonyError::Invalid("a call needs from/to numbers".into()));
         }
 
+        // RLS scope (ADR-0008): the company is on the CDR — bind it for the whole body so the dedup
+        // probe, the insert transaction, and the duplicate re-read all run with `app.company_id` set.
+        // A provider webhook is not an HTTP request in the caller's tenant, so this explicit scope
+        // (not an ambient request one) is what fences the write. Explicit `company_id` binds stay as
+        // defense-in-depth.
+        let company = c.company_id;
+        company_scope::with_company_scope(Some(company), async move {
         // Fast path: already seen this provider CDR → return the original, publish nothing.
         if let Some(ext) = &c.external_id {
-            if let Some(row) = sqlx::query(
-                "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
-                .bind(c.company_id).bind(ext)
-                .fetch_optional(&self.pool)
-                .await?
+            if let Some(row) = company_scope::fetch_optional_row_scoped(
+                &self.pool,
+                sqlx::query(
+                    "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
+                    .bind(c.company_id).bind(ext),
+            ).await?
             {
                 return Ok(CallOutcome {
                     call_id: row.get("id"), duration_seconds: row.get("duration_seconds"), duplicate: true,
@@ -87,6 +96,7 @@ impl TelephonyWriteService {
         let call_id = Uuid::new_v4();
 
         let mut tx = self.pool.begin().await?;
+        company_scope::bind_company_on(&mut tx, c.company_id).await?;
         let inserted: Option<Uuid> = sqlx::query_scalar(
             r#"INSERT INTO telephony.calls
                  (id, company_id, direction, from_number, to_number, party_id, agent_id, status,
@@ -105,11 +115,12 @@ impl TelephonyWriteService {
 
         let Some(call_id) = inserted else {
             tx.rollback().await?;
-            let row = sqlx::query(
-                "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
-                .bind(c.company_id).bind(c.external_id.as_deref().unwrap_or_default())
-                .fetch_one(&self.pool)
-                .await?;
+            let row = company_scope::fetch_one_row_scoped(
+                &self.pool,
+                sqlx::query(
+                    "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
+                    .bind(c.company_id).bind(c.external_id.as_deref().unwrap_or_default()),
+            ).await?;
             return Ok(CallOutcome {
                 call_id: row.get("id"), duration_seconds: row.get("duration_seconds"), duplicate: true,
             });
@@ -144,17 +155,23 @@ impl TelephonyWriteService {
         tx.commit().await?;
         events.publish(&event);
         Ok(CallOutcome { call_id, duration_seconds: duration, duplicate: false })
+        }).await
     }
 
     /// Attach a call to what it concerns (a lead, an issue).
     pub async fn link_call(&self, call_id: Uuid, subject_type: &str, subject_id: Uuid) -> Result<(), TelephonyError> {
-        let n = sqlx::query(
-            r#"UPDATE telephony.calls SET subject_type=$2, subject_id=$3
-               WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-        )
-        .bind(call_id).bind(subject_type).bind(subject_id)
-        .execute(&self.pool)
-        .await?;
+        // RLS scope (ADR-0008), ID-only pattern: identified by the call id alone — no company argument.
+        // The write rides the REQUEST-dedicated connection (which carries the caller's `app.company_id`),
+        // so another company's call is simply not matched. A non-request caller (event/job) must wrap
+        // this in `with_company_scope(Some(company_id))`, otherwise it fails closed.
+        let n = company_scope::execute_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"UPDATE telephony.calls SET subject_type=$2, subject_id=$3
+                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(call_id).bind(subject_type).bind(subject_id),
+        ).await?;
         if n.rows_affected() != 1 {
             return Err(TelephonyError::NotFound("call"));
         }
