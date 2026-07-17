@@ -7,8 +7,10 @@
 
 use backbone_orm::company_scope;
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::infrastructure::persistence::{CallRepository, NewCallRow};
 
 use super::telephony_events::*;
 
@@ -51,11 +53,13 @@ pub struct CallOutcome {
 
 pub struct TelephonyWriteService {
     pool: PgPool,
+    calls: CallRepository,
 }
 
 impl TelephonyWriteService {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        let calls = CallRepository::new(pool.clone());
+        Self { pool, calls }
     }
 
     /// Record a call CDR — idempotent on (company, external_id) when a provider id is present. Computes
@@ -79,15 +83,9 @@ impl TelephonyWriteService {
         company_scope::with_company_scope(Some(company), async move {
         // Fast path: already seen this provider CDR → return the original, publish nothing.
         if let Some(ext) = &c.external_id {
-            if let Some(row) = company_scope::fetch_optional_row_scoped(
-                &self.pool,
-                sqlx::query(
-                    "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
-                    .bind(c.company_id).bind(ext),
-            ).await?
-            {
+            if let Some(row) = self.calls.find_outcome_by_external_id(&self.pool, c.company_id, ext).await? {
                 return Ok(CallOutcome {
-                    call_id: row.get("id"), duration_seconds: row.get("duration_seconds"), duplicate: true,
+                    call_id: row.id, duration_seconds: row.duration_seconds, duplicate: true,
                 });
             }
         }
@@ -97,32 +95,33 @@ impl TelephonyWriteService {
 
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, c.company_id).await?;
-        let inserted: Option<Uuid> = sqlx::query_scalar(
-            r#"INSERT INTO telephony.calls
-                 (id, company_id, direction, from_number, to_number, party_id, agent_id, status,
-                  external_id, subject_type, subject_id, started_at, answered_at, ended_at,
-                  duration_seconds, recording_url, notes)
-               VALUES ($1,$2,$3::call_direction,$4,$5,$6,$7,$8::call_status,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-               ON CONFLICT (company_id, external_id) DO NOTHING
-               RETURNING id"#,
-        )
-        .bind(call_id).bind(c.company_id).bind(&c.direction).bind(&c.from_number).bind(&c.to_number)
-        .bind(c.party_id).bind(c.agent_id).bind(&c.status).bind(&c.external_id)
-        .bind(&c.subject_type).bind(c.subject_id).bind(c.started_at).bind(c.answered_at).bind(c.ended_at)
-        .bind(duration).bind(&c.recording_url).bind(&c.notes)
-        .fetch_optional(&mut *tx)
-        .await?;
+        let inserted = self.calls.insert_cdr(&mut tx, &NewCallRow {
+            id: call_id,
+            company_id: c.company_id,
+            direction: &c.direction,
+            from_number: &c.from_number,
+            to_number: &c.to_number,
+            party_id: c.party_id,
+            agent_id: c.agent_id,
+            status: &c.status,
+            external_id: c.external_id.as_deref(),
+            subject_type: c.subject_type.as_deref(),
+            subject_id: c.subject_id,
+            started_at: c.started_at,
+            answered_at: c.answered_at,
+            ended_at: c.ended_at,
+            duration_seconds: duration,
+            recording_url: c.recording_url.as_deref(),
+            notes: c.notes.as_deref(),
+        }).await?;
 
         let Some(call_id) = inserted else {
             tx.rollback().await?;
-            let row = company_scope::fetch_one_row_scoped(
-                &self.pool,
-                sqlx::query(
-                    "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
-                    .bind(c.company_id).bind(c.external_id.as_deref().unwrap_or_default()),
+            let row = self.calls.fetch_outcome_by_external_id(
+                &self.pool, c.company_id, c.external_id.as_deref().unwrap_or_default(),
             ).await?;
             return Ok(CallOutcome {
-                call_id: row.get("id"), duration_seconds: row.get("duration_seconds"), duplicate: true,
+                call_id: row.id, duration_seconds: row.duration_seconds, duplicate: true,
             });
         };
 
@@ -164,15 +163,8 @@ impl TelephonyWriteService {
         // The write rides the REQUEST-dedicated connection (which carries the caller's `app.company_id`),
         // so another company's call is simply not matched. A non-request caller (event/job) must wrap
         // this in `with_company_scope(Some(company_id))`, otherwise it fails closed.
-        let n = company_scope::execute_scoped(
-            &self.pool,
-            sqlx::query(
-                r#"UPDATE telephony.calls SET subject_type=$2, subject_id=$3
-                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(call_id).bind(subject_type).bind(subject_id),
-        ).await?;
-        if n.rows_affected() != 1 {
+        let n = self.calls.update_subject(&self.pool, call_id, subject_type, subject_id).await?;
+        if n != 1 {
             return Err(TelephonyError::NotFound("call"));
         }
         Ok(())

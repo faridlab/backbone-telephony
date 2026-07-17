@@ -13,6 +13,10 @@
 user_owned:
   - "src/application/service/telephony_events.rs"
   - "src/application/service/telephony_write_service.rs"
+  # Owns the hand-written Call SQL (the CDR dedup probe + idempotent insert + subject link) that the
+  # write service orchestrates. Declared here — not renamed with a `_custom` suffix — so the generator
+  # skips it wholesale; this declaration is what makes editing it legitimate.
+  - "src/infrastructure/persistence/call_repository.rs"
   - "tests/integrity_probes.rs"
   - "tests/telephony_crm_seam.rs"
   - "tests/telephony_golden_cases.rs"

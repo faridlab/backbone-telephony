@@ -22,4 +22,7 @@ pub use backbone_orm::repository::{
 
 // Re-export custom persistence types
 // <<< CUSTOM
+// The hand-written Call SQL's parameter/projection types (see `call_repository`, which is declared
+// `user_owned` in metaphor.codegen.yaml).
+pub use call_repository::{CallOutcomeRow, NewCallRow};
 // END CUSTOM
