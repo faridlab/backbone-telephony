@@ -143,7 +143,7 @@ impl TelephonyWriteService {
             })
         };
         let record = backbone_outbox::OutboxRecord::new(
-            event_type_of(&event), "Call", call_id.to_string(),
+            event_type_of(&event), "Call", call_id.to_string(), c.company_id,
             serde_json::to_value(&event).map_err(|e| TelephonyError::Invalid(e.to_string()))?,
             Utc::now(),
         );
