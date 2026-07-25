@@ -23,7 +23,7 @@ backbone-auth = { git = "https://github.com/faridlab/backbone-framework", branch
 backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", branch = "main" }
 # Transactional outbox — the CallLogged/MissedCall event is staged in the SAME tx as the call insert, so
 # it commits atomically and can never be lost between commit and publish. Framework plumbing, not an edge.
-backbone-outbox = { path = "../backbone-framework/backbone-outbox" }
+backbone-outbox = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.4", features = ["multi_tenant"] }
 
 # Core async runtime and serialization
 tokio = { version = "1.0", features = ["full"] }
