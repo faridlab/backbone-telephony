@@ -158,16 +158,27 @@ impl TelephonyWriteService {
     }
 
     /// Attach a call to what it concerns (a lead, an issue).
-    pub async fn link_call(&self, call_id: Uuid, subject_type: &str, subject_id: Uuid) -> Result<(), TelephonyError> {
-        // RLS scope (ADR-0008), ID-only pattern: identified by the call id alone — no company argument.
-        // The write rides the REQUEST-dedicated connection (which carries the caller's `app.company_id`),
-        // so another company's call is simply not matched. A non-request caller (event/job) must wrap
-        // this in `with_company_scope(Some(company_id))`, otherwise it fails closed.
-        let n = self.calls.update_subject(&self.pool, call_id, subject_type, subject_id).await?;
-        if n != 1 {
-            return Err(TelephonyError::NotFound("call"));
-        }
-        Ok(())
+    ///
+    /// `company_id` scopes the update, so a principal of company A cannot attach company B's call
+    /// by knowing its id — proving *who* the caller is is not enough, the row must be theirs. A
+    /// mismatched tenant is indistinguishable from a missing call (`NotFound`), so this does not
+    /// leak whether the id exists.
+    pub async fn link_call(
+        &self,
+        call_id: Uuid,
+        company_id: Uuid,
+        subject_type: &str,
+        subject_id: Uuid,
+    ) -> Result<(), TelephonyError> {
+        // RLS scope (ADR-0008): company on the parameter — scope the subject update so it runs with
+        // `app.company_id` set. An event/job caller can no longer forget to wrap this in a scope.
+        company_scope::with_company_scope(Some(company_id), async move {
+            let n = self.calls.update_subject(&self.pool, call_id, subject_type, subject_id).await?;
+            if n != 1 {
+                return Err(TelephonyError::NotFound("call"));
+            }
+            Ok(())
+        }).await
     }
 }
 

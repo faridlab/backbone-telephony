@@ -73,3 +73,25 @@ async fn tip4_negative_duration_cannot_be_stored() {
         .bind(out.call_id).fetch_one(&pool).await.unwrap();
     assert_eq!(stored, 0, "a skewed CDR stores zero talk-time, never negative");
 }
+
+// TIP-5 — link_call attaches a call to a subject, with the company on the parameter (ADR-0008).
+// The scope wrapper is what fences the write when RLS is enforced; this test exercises the new
+// signature end-to-end (record → link → verify the columns flipped). Cross-tenant isolation is the
+// RLS fence's job, not the signature's — the seam DB on :5433 is unfenced, so we don't assert it here.
+#[tokio::test]
+async fn tip5_link_call_scoped_by_company() {
+    let pool = pool().await;
+    let company = Uuid::new_v4();
+    let svc = TelephonyWriteService::new(pool.clone());
+    let out = svc.record_call(cdr(company, Some(format!("c-{}", Uuid::new_v4()))), &CapturingSink::new())
+        .await.unwrap();
+
+    let subject_id = Uuid::new_v4();
+    svc.link_call(out.call_id, company, "lead", subject_id).await.expect("link in own company");
+
+    let (st, sid): (Option<String>, Option<Uuid>) = sqlx::query_as(
+        "SELECT subject_type, subject_id FROM telephony.calls WHERE id=$1")
+        .bind(out.call_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(st.as_deref(), Some("lead"));
+    assert_eq!(sid, Some(subject_id), "subject is recorded on the call");
+}
