@@ -23,6 +23,7 @@ pub mod infrastructure;
 pub mod application;
 pub mod presentation;
 pub mod seeders;
+pub mod exports;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -40,6 +41,8 @@ use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
 
+use application::service::{LoggingSink, TelephonyEventSink, TelephonyWriteService};
+
 /// Telephony module configuration
 ///
 /// Use the builder pattern to configure and register this module:
@@ -53,7 +56,11 @@ use sqlx::PgPool;
 /// let router = telephony.all_crud_routes();
 /// ```
 pub struct TelephonyModule {
-    pub call_service: Arc<CallService>,
+    pub(crate) call_service: Arc<CallService>,
+    // <<< CUSTOM FIELDS
+    pub(crate) write_service: Arc<TelephonyWriteService>,
+    pub(crate) event_sink: Arc<dyn TelephonyEventSink>,
+    // END CUSTOM
 }
 
 impl TelephonyModule {
@@ -76,15 +83,60 @@ impl TelephonyModule {
             .merge(create_call_routes(self.call_service.clone()))
     }
 
-    /// Deprecated alias for [`Self::all_crud_routes`]. `routes()` reads like
-    /// "the routes" but mounts UNVALIDATED generic CRUD on every entity — a naive
-    /// mount exposes unguarded writes. Compose a guarded router (read + validated
-    /// writes) for production, or call `all_crud_routes()` to opt into the full
-    /// unguarded surface explicitly.
-    #[deprecated(note = "mounts unvalidated generic CRUD on every entity; compose a guarded router for production, or call all_crud_routes() for the intentional full/unguarded surface")]
+    /// The default surface — equivalent to [`Self::validated_routes`]: read-only base merged with
+    /// the validated write path (CDR ingest + subject link). Generic mutation can't reach here.
+    /// For the explicit unguarded admin/seeding surface, call [`Self::all_crud_routes`].
     pub fn routes(&self) -> Router {
-        self.all_crud_routes()
+        self.validated_routes()
     }
+
+    /// Read-only routes for every entity (GET endpoints only) — the safe base.
+    ///
+    /// Generic mutation can't reach here, so this surface cannot bypass a
+    /// validated write service's invariants. Use this as the production base and
+    /// merge validated write routes (or a write service's HTTP layer) onto it.
+    pub fn readonly_routes(&self) -> Router {
+        use presentation::http::{
+            create_call_read_routes,
+        };
+
+        Router::new()
+            .merge(create_call_read_routes(self.call_service.clone()))
+    }
+
+    // <<< CUSTOM METHODS
+    /// The production surface: read-only base (`GET /calls…`) merged with the validated write
+    /// path (`POST /calls` CDR ingest, `POST /calls/:id/link` subject attach). Generic mutation
+    /// cannot reach here, so the CDR dedup, outbox event, subject link, and `company_id`/RLS
+    /// fencing (ADR-0008 + ADR-0011) all enforce. Prefer this over `all_crud_routes()`.
+    pub fn validated_routes(&self) -> Router {
+        use presentation::http::create_telephony_validated_write_routes;
+        self.readonly_routes()
+            .merge(create_telephony_validated_write_routes(
+                self.write_service.clone(),
+                self.event_sink.clone(),
+            ))
+    }
+
+    /// Override the in-process event sink (default is `LoggingSink`). The durable path is the
+    /// transactional outbox staged inside `record_call`; this sink is only a low-fanout notify,
+    /// so the default is safe for single-process composition — supply a bus-backed sink for
+    /// fan-out to multiple consumers.
+    pub fn with_event_sink(mut self, sink: Arc<dyn TelephonyEventSink>) -> Self {
+        self.event_sink = sink;
+        self
+    }
+
+    /// The validated CDR write service (dedup + idempotent insert + subject link + outbox).
+    pub fn write_service(&self) -> &Arc<TelephonyWriteService> {
+        &self.write_service
+    }
+
+    /// The in-process event sink the validated write path publishes to.
+    pub fn event_sink(&self) -> &Arc<dyn TelephonyEventSink> {
+        &self.event_sink
+    }
+    // END CUSTOM
 }
 
 /// Builder for TelephonyModule
@@ -119,11 +171,18 @@ impl TelephonyModuleBuilder {
         let call_service = Arc::new(CallService::with_repository(call_repository.clone()));
 
         // <<< CUSTOM
+        // Validated write engine — the CDR dedup + idempotent insert + subject link + same-tx
+        // outbox event (ADR-0008 + ADR-0011). The in-process sink defaults to LoggingSink; the
+        // durable path is the outbox, so this default is safe for single-process composition.
+        let write_service = Arc::new(TelephonyWriteService::new(db_pool.clone()));
+        let event_sink: Arc<dyn TelephonyEventSink> = Arc::new(LoggingSink);
         // END CUSTOM
 
         Ok(TelephonyModule {
             call_service,
             // <<< CUSTOM
+            write_service,
+            event_sink,
             // END CUSTOM
         })
     }

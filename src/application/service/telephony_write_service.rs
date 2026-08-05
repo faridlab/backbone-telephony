@@ -44,7 +44,7 @@ pub struct InboundCdr {
     pub subject_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct CallOutcome {
     pub call_id: Uuid,
     pub duration_seconds: i32,

@@ -17,9 +17,17 @@ user_owned:
   # write service orchestrates. Declared here — not renamed with a `_custom` suffix — so the generator
   # skips it wholesale; this declaration is what makes editing it legitimate.
   - "src/infrastructure/persistence/call_repository.rs"
+  # The validated write HTTP surface — serves TelephonyWriteService (CDR ingest + subject link) as
+  # the production alternative to unguarded generic CRUD. Hand-authored; declared here so the
+  # generator skips it wholesale.
+  - "src/presentation/http/telephony_write_handler.rs"
   - "tests/integrity_probes.rs"
-  - "tests/telephony_crm_seam.rs"
   - "tests/telephony_golden_cases.rs"
+  - "tests/validated_write_routes.rs"
+  # NOTE: the cross-module MissedCall→CRM-callback-lead seam lives at the WORKSPACE level
+  # (seams/telephony-crm-seam), not in this crate — it links the real backbone-crm module, which is
+  # a sibling that is not always checked out. Keeping it out of this crate keeps the module
+  # self-contained and buildable standalone.
   - "scripts/**"
   # Hand-authored behavior (services + their HTTP surface). Examples:
   # - "src/application/service/onboarding_service.rs"
