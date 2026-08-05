@@ -8,7 +8,7 @@
 //! ## Usage from other modules
 //!
 //! ```text
-//! use telephony::exports::{CallDto, TelephonyQueryService};
+//! use telephony::exports::{CallDto};
 //! ```
 
 mod types;
@@ -30,9 +30,6 @@ pub use events::*;
 /// - `CallDto` - Data transfer object for Call
 /// - `CallSummary` - Summary view of Call
 /// - `CallId` - Type-safe ID wrapper
-///
-/// ## Public Services
-/// - `TelephonyQueryService` - Read-only queries
 ///
 /// ## Public Events
 /// - `CallCreatedEvent` - Published when Call is created

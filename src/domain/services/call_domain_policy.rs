@@ -10,8 +10,12 @@ use crate::domain::entity::Call;
 
 /// Domain policy for Call — permits all operations (no business invariants).
 ///
-/// To add domain rules, replace this alias with a struct implementing
-/// `backbone_core::DomainPolicy<Call>` in the `// <<< CUSTOM` zone.
+/// NOTE: `DomainPolicy` is advisory only — it is NOT invoked by the generic
+/// CRUD pipeline. `GenericCrudService` enforces invariants via a different
+/// trait, `ServiceLifecycle` (`before_create` / `before_update`). So implementing
+/// a real `DomainPolicy` here is not yet wired to runtime. For actual per-write
+/// enforcement, implement `backbone_core::ServiceLifecycle<Call>` on a custom
+/// service. `PermitAllPolicy` is the safe default until then.
 pub type CallDomainPolicy = PermitAllPolicy<Call>;
 
 // <<< CUSTOM

@@ -337,6 +337,9 @@ impl backbone_orm::EntityRepoMeta for Call {
     fn search_fields() -> &'static [&'static str] {
         &["from_number", "to_number"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for Call entity
