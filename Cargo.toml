@@ -86,7 +86,3 @@ pretty_assertions = "1.0"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 jsonwebtoken = "9.3"
 rand = "0.8"
-# TEST-ONLY edge: the missed-call seam proves a MissedCall raises a callback lead in the REAL backbone-crm
-# via an in-test event bridge. Dev-dependency ONLY — the shipped library reaches CRM through an event, not
-# a Cargo edge.
-backbone-crm = { path = "../backbone-crm" }

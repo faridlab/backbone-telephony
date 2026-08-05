@@ -258,40 +258,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "backbone-crm"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "backbone-auth",
- "backbone-core",
- "backbone-messaging",
- "backbone-orm",
- "chrono",
- "config",
- "pbjson",
- "prost",
- "prost-types",
- "regex",
- "rust_decimal",
- "serde",
- "serde_json",
- "serde_yaml",
- "sqlx",
- "thiserror 1.0.69",
- "tokio",
- "tonic",
- "tonic-build",
- "tower 0.4.13",
- "tower-http 0.5.2",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "validator",
-]
-
-[[package]]
 name = "backbone-messaging"
 version = "2.0.0"
 source = "git+https://github.com/faridlab/backbone-framework?branch=main#938d7b9b6eeb7c2e189eb7dabea558c513726b84"
@@ -346,7 +312,6 @@ dependencies = [
  "axum",
  "backbone-auth",
  "backbone-core",
- "backbone-crm",
  "backbone-messaging",
  "backbone-orm",
  "backbone-outbox",
@@ -1863,16 +1828,6 @@ name = "pathdiff"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
-
-[[package]]
-name = "pbjson"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7e6349fa080353f4a597daffd05cb81572a9c031a6d4fff7e504947496fcc68"
-dependencies = [
- "base64 0.21.7",
- "serde",
-]
 
 [[package]]
 name = "pem"
@@ -3607,16 +3562,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-serde"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
-dependencies = [
- "serde",
- "tracing-core",
-]
-
-[[package]]
 name = "tracing-subscriber"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3626,15 +3571,12 @@ dependencies = [
  "nu-ansi-term",
  "once_cell",
  "regex-automata",
- "serde",
- "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
- "tracing-serde",
 ]
 
 [[package]]
