@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+use super::AuditMetadata;
 use super::CallDirection;
 use super::CallStatus;
-use super::AuditMetadata;
 
 /// Strongly-typed ID for Call
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -13,9 +13,15 @@ use super::AuditMetadata;
 pub struct CallId(pub Uuid);
 
 impl CallId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for CallId {
@@ -32,26 +38,33 @@ impl std::str::FromStr for CallId {
 }
 
 impl From<Uuid> for CallId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<CallId> for Uuid {
-    fn from(id: CallId) -> Self { id.0 }
+    fn from(id: CallId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for CallId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for CallId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Call {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub direction: CallDirection,
     pub from_number: String,
     pub to_number: String,
@@ -75,14 +88,20 @@ pub struct Call {
 impl Call {
     /// Create a builder for Call
     pub fn builder() -> CallBuilder {
-        CallBuilder::default()
+        <CallBuilder as Default>::default()
     }
 
     /// Create a new Call with required fields
-    pub fn new(company_id: Uuid, direction: CallDirection, from_number: String, to_number: String, status: CallStatus, started_at: DateTime<Utc>, duration_seconds: i32) -> Self {
+    pub fn new(
+        direction: CallDirection,
+        from_number: String,
+        to_number: String,
+        status: CallStatus,
+        started_at: DateTime<Utc>,
+        duration_seconds: i32,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             direction,
             from_number,
             to_number,
@@ -157,7 +176,6 @@ impl Call {
         &self.status
     }
 
-
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -224,53 +242,80 @@ impl Call {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "direction" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.direction = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.direction = v;
+                    }
                 }
                 "from_number" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.from_number = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.from_number = v;
+                    }
                 }
                 "to_number" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.to_number = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.to_number = v;
+                    }
                 }
                 "party_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.party_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.party_id = v;
+                    }
                 }
                 "agent_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.agent_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.agent_id = v;
+                    }
                 }
                 "status" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.status = v;
+                    }
                 }
                 "external_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.external_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.external_id = v;
+                    }
                 }
                 "subject_type" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.subject_type = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.subject_type = v;
+                    }
                 }
                 "subject_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.subject_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.subject_id = v;
+                    }
                 }
                 "started_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.started_at = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.started_at = v;
+                    }
                 }
                 "answered_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.answered_at = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.answered_at = v;
+                    }
                 }
                 "ended_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.ended_at = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.ended_at = v;
+                    }
                 }
                 "duration_seconds" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.duration_seconds = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.duration_seconds = v;
+                    }
                 }
                 "recording_url" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.recording_url = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.recording_url = v;
+                    }
                 }
                 "notes" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.notes = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.notes = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -326,7 +371,6 @@ impl backbone_orm::EntityRepoMeta for Call {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("party_id".to_string(), "uuid".to_string());
         m.insert("agent_id".to_string(), "uuid".to_string());
         m.insert("subject_id".to_string(), "uuid".to_string());
@@ -337,9 +381,6 @@ impl backbone_orm::EntityRepoMeta for Call {
     fn search_fields() -> &'static [&'static str] {
         &["from_number", "to_number"]
     }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
-    }
 }
 
 /// Builder for Call entity
@@ -348,7 +389,6 @@ impl backbone_orm::EntityRepoMeta for Call {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct CallBuilder {
-    company_id: Option<Uuid>,
     direction: Option<CallDirection>,
     from_number: Option<String>,
     to_number: Option<String>,
@@ -367,12 +407,6 @@ pub struct CallBuilder {
 }
 
 impl CallBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the direction field (required)
     pub fn direction(mut self, value: CallDirection) -> Self {
         self.direction = Some(value);
@@ -467,20 +501,24 @@ impl CallBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Call, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
-        let direction = self.direction.ok_or_else(|| "direction is required".to_string())?;
-        let from_number = self.from_number.ok_or_else(|| "from_number is required".to_string())?;
-        let to_number = self.to_number.ok_or_else(|| "to_number is required".to_string())?;
+        let direction = self
+            .direction
+            .ok_or_else(|| "direction is required".to_string())?;
+        let from_number = self
+            .from_number
+            .ok_or_else(|| "from_number is required".to_string())?;
+        let to_number = self
+            .to_number
+            .ok_or_else(|| "to_number is required".to_string())?;
 
         Ok(Call {
             id: Uuid::new_v4(),
-            company_id,
             direction,
             from_number,
             to_number,
             party_id: self.party_id,
             agent_id: self.agent_id,
-            status: self.status.unwrap_or(CallStatus::default()),
+            status: self.status.unwrap_or_default(),
             external_id: self.external_id,
             subject_type: self.subject_type,
             subject_id: self.subject_id,

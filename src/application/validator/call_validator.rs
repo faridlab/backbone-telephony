@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<Call>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
-use backbone_core::{OptionalNotBlank, RequiredString};
 use crate::domain::entity::Call;
+use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{OptionalNotBlank, RequiredString};
 
 /// Validator type alias for Call entities.
 pub type CallValidator = EntityValidator<Call>;
@@ -15,12 +15,22 @@ pub type CallValidator = EntityValidator<Call>;
 /// Build a validator for Call with all schema-defined field rules.
 pub fn call_validator() -> CallValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("from_number", |e: &Call| &e.from_number))
+        .rule(RequiredString::new("from_number", |e: &Call| {
+            &e.from_number
+        }))
         .rule(RequiredString::new("to_number", |e: &Call| &e.to_number))
-        .rule(OptionalNotBlank::new("external_id", |e: &Call| e.external_id.as_deref()))
-        .rule(OptionalNotBlank::new("subject_type", |e: &Call| e.subject_type.as_deref()))
-        .rule(OptionalNotBlank::new("recording_url", |e: &Call| e.recording_url.as_deref()))
-        .rule(OptionalNotBlank::new("notes", |e: &Call| e.notes.as_deref()))
+        .rule(OptionalNotBlank::new("external_id", |e: &Call| {
+            e.external_id.as_deref()
+        }))
+        .rule(OptionalNotBlank::new("subject_type", |e: &Call| {
+            e.subject_type.as_deref()
+        }))
+        .rule(OptionalNotBlank::new("recording_url", |e: &Call| {
+            e.recording_url.as_deref()
+        }))
+        .rule(OptionalNotBlank::new("notes", |e: &Call| {
+            e.notes.as_deref()
+        }))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

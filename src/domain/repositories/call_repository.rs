@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the Call aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::entity::{Call, CallDirection, CallStatus};
@@ -44,7 +44,6 @@ pub struct CallPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct CallFilter {
-    pub company_id: Option<Uuid>,
     pub direction: Option<CallDirection>,
     pub from_number: Option<String>,
     pub to_number: Option<String>,
@@ -61,7 +60,17 @@ pub struct CallFilter {
 impl CallFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.direction.is_some() || self.from_number.is_some() || self.to_number.is_some() || self.party_id.is_some() || self.agent_id.is_some() || self.status.is_some() || self.external_id.is_some() || self.subject_type.is_some() || self.subject_id.is_some() || self.recording_url.is_some() || self.notes.is_some()
+        self.direction.is_some()
+            || self.from_number.is_some()
+            || self.to_number.is_some()
+            || self.party_id.is_some()
+            || self.agent_id.is_some()
+            || self.status.is_some()
+            || self.external_id.is_some()
+            || self.subject_type.is_some()
+            || self.subject_id.is_some()
+            || self.recording_url.is_some()
+            || self.notes.is_some()
     }
 }
 
@@ -71,7 +80,6 @@ impl CallFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait CallRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -99,7 +107,11 @@ pub trait CallRepository: Send + Sync {
     async fn list(&self, params: CallPaginationParams) -> Result<CallPaginatedResult>;
 
     /// List call with pagination and filters
-    async fn list_with_filters(&self, params: CallPaginationParams, filters: CallFilter) -> Result<CallPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: CallPaginationParams,
+        filters: CallFilter,
+    ) -> Result<CallPaginatedResult>;
 
     /// Count all call entities
     async fn count(&self) -> Result<u64>;

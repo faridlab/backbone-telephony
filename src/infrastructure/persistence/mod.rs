@@ -8,6 +8,9 @@ mod call_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
+// The hand-written Call SQL's parameter/projection types (see `call_repository`, which is declared
+// `user_owned` in metaphor.codegen.yaml).
+pub use call_repository::{CallOutcomeRow, NewCallRow};
 // END CUSTOM
 
 // Re-exports
@@ -15,14 +18,10 @@ pub use call_repository::CallRepository;
 
 // Re-export backbone-orm types
 pub use backbone_orm::repository::{
-    DatabaseOperations, PostgresRepository,
-    PaginationParams, PaginationInfo, PaginatedResult,
-    FilterParams, FilterCondition, SortParams, SortDirection,
+    DatabaseOperations, FilterCondition, FilterParams, PaginatedResult, PaginationInfo,
+    PaginationParams, PostgresRepository, SortDirection, SortParams,
 };
 
 // Re-export custom persistence types
 // <<< CUSTOM
-// The hand-written Call SQL's parameter/projection types (see `call_repository`, which is declared
-// `user_owned` in metaphor.codegen.yaml).
-pub use call_repository::{CallOutcomeRow, NewCallRow};
 // END CUSTOM

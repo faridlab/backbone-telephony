@@ -387,7 +387,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - direction
         - from_number
         - to_number
@@ -397,9 +396,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         direction:
@@ -467,7 +463,6 @@ components:
     CreateCallRequest:
       type: object
       required:
-        - company_id
         - direction
         - from_number
         - to_number
@@ -476,9 +471,6 @@ components:
         - duration_seconds
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         direction:
           type: string
         from_number:
@@ -531,7 +523,6 @@ components:
     UpdateCallRequest:
       type: object
       required:
-        - company_id
         - direction
         - from_number
         - to_number
@@ -540,9 +531,6 @@ components:
         - duration_seconds
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         direction:
           type: string
         from_number:
@@ -595,9 +583,6 @@ components:
     PatchCallRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         direction:
           type: string
         from_number:

@@ -64,6 +64,11 @@ tonic = "0.12"
 prost = "0.13"
 prost-types = "0.13"
 
+# OpenAPI schema derive. The schema generator emits ungated `use utoipa::ToSchema;`
+# in every entity and DTO file, so the dep is unconditional even though the
+# `derive(ToSchema)` itself is feature-gated to `openapi`.
+utoipa = { version = "5", features = ["chrono", "uuid"] }
+
 [features]
 default = []
 events = []

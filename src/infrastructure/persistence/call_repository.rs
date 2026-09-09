@@ -5,6 +5,10 @@
 //! below are the home for every hand-written Call SQL statement (4-layer rule: services orchestrate,
 //! repositories hold the SQL).
 //!
+//! Tenancy (ADR-0029): the SQL here carries no tenant key. The scoped-execute helpers ride the
+//! request-dedicated connection when the composing service bound one (its fence variables govern
+//! what the RLS layer accepts) and fall back to a plain pool execute otherwise.
+//!
 //! Thin newtype over `backbone_orm::GenericCrudRepository<Call, backbone_orm::SoftDelete>`.
 //! All standard CRUD methods are available via `Deref`.
 
@@ -12,8 +16,6 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-
-use backbone_orm::company_scope;
 
 use crate::domain::entity::Call;
 
@@ -24,13 +26,13 @@ pub const TABLE_NAME: &str = "telephony.calls";
 ///
 /// All standard CRUD, soft-delete, pagination, and bulk methods are
 /// provided automatically via `Deref` to `backbone_orm::GenericCrudRepository`.
-pub struct CallRepository(
-    backbone_orm::GenericCrudRepository<Call, backbone_orm::SoftDelete>,
-);
+pub struct CallRepository(backbone_orm::GenericCrudRepository<Call, backbone_orm::SoftDelete>);
 
 impl std::ops::Deref for CallRepository {
     type Target = backbone_orm::GenericCrudRepository<Call, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl CallRepository {
@@ -43,11 +45,10 @@ impl CallRepository {
 /// The exact row a provider CDR insert writes.
 ///
 /// Mirrors the raw column shape rather than the `Call` entity: `direction`/`status` arrive from a
-/// provider webhook as free strings and are cast at the DB (`$3::call_direction`, `$8::call_status`),
+/// provider webhook as free strings and are cast at the DB (`$2::call_direction`, `$7::call_status`),
 /// which is what lets a bad provider value fail as a DB error instead of a deserialize panic.
 pub struct NewCallRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub direction: &'a str,
     pub from_number: &'a str,
     pub to_number: &'a str,
@@ -74,73 +75,80 @@ pub struct CallOutcomeRow {
 /// Hand-written Call SQL. Lives here (not in the write service) per the module's 4-layer rule:
 /// services orchestrate and own the unit of work, repositories hold the SQL.
 impl CallRepository {
-    /// Probe for an already-recorded provider CDR — the (company, external_id) dedup fast path.
+    /// Probe for an already-recorded provider CDR — the external_id dedup fast path.
     ///
-    /// A read outside any transaction: takes the pool and runs `fetch_optional_row_scoped` so the
-    /// RLS fence (ADR-0008) applies. The explicit `company_id = $1` filter stays as defense-in-depth.
+    /// A read outside any transaction: takes the pool and runs `fetch_optional_row_scoped`, so it
+    /// rides the request-dedicated connection when the composing service bound one — under a
+    /// decorated deployment the fence limits the probe to the caller's rows, and a raw
+    /// `fetch_optional` would land on a fresh pooled connection where no fence variables are set.
+    /// With no scope bound this is a plain lookup.
     pub async fn find_outcome_by_external_id(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         external_id: &str,
     ) -> Result<Option<CallOutcomeRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = backbone_orm::org_scope::fetch_optional_row_scoped(
             pool,
-            sqlx::query(
-                "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
-                .bind(company_id).bind(external_id),
-        ).await?;
-        Ok(row.map(|r| CallOutcomeRow { id: r.get("id"), duration_seconds: r.get("duration_seconds") }))
+            sqlx::query("SELECT id, duration_seconds FROM telephony.calls WHERE external_id=$1")
+                .bind(external_id),
+        )
+        .await?;
+        Ok(row.map(|r| CallOutcomeRow {
+            id: r.get("id"),
+            duration_seconds: r.get("duration_seconds"),
+        }))
     }
 
-    /// Re-read the original after a losing `ON CONFLICT DO NOTHING` race. Same scoping as the probe.
+    /// Re-read the winner after a concurrent duplicate lost a per-unit unique. Same scoping as the probe.
     pub async fn fetch_outcome_by_external_id(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         external_id: &str,
     ) -> Result<CallOutcomeRow, sqlx::Error> {
-        let row = company_scope::fetch_one_row_scoped(
+        let row = backbone_orm::org_scope::fetch_optional_row_scoped(
             pool,
-            sqlx::query(
-                "SELECT id, duration_seconds FROM telephony.calls WHERE company_id=$1 AND external_id=$2")
-                .bind(company_id).bind(external_id),
-        ).await?;
-        Ok(CallOutcomeRow { id: row.get("id"), duration_seconds: row.get("duration_seconds") })
+            sqlx::query("SELECT id, duration_seconds FROM telephony.calls WHERE external_id=$1")
+                .bind(external_id),
+        )
+        .await?;
+        row.map(|r| CallOutcomeRow {
+            id: r.get("id"),
+            duration_seconds: r.get("duration_seconds"),
+        })
+        .ok_or(sqlx::Error::RowNotFound)
     }
 
-    /// Insert a CDR idempotently on (company, external_id). `Ok(None)` = a concurrent writer won the
-    /// race and the caller should re-read the original.
-    ///
-    /// Takes the CALLER'S connection so the insert and the outbox stage commit as one unit. The caller
-    /// binds the company on that connection (`bind_company_on`) before calling — don't re-bind here.
+    /// Insert a CDR. Takes the CALLER'S connection so the insert and the outbox stage commit as one
+    /// unit; the caller binds the ambient org scope on that transaction (don't re-bind here). Dedup
+    /// against a concurrent writer is enforced by whatever per-unit unique the composing service's
+    /// tenancy descriptor installed — a losing insert fails as a unique violation and the service
+    /// answers idempotently by re-reading the winner.
     pub async fn insert_cdr(
         &self,
         conn: &mut sqlx::PgConnection,
         c: &NewCallRow<'_>,
-    ) -> Result<Option<Uuid>, sqlx::Error> {
-        sqlx::query_scalar(
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
             r#"INSERT INTO telephony.calls
-                 (id, company_id, direction, from_number, to_number, party_id, agent_id, status,
+                 (id, direction, from_number, to_number, party_id, agent_id, status,
                   external_id, subject_type, subject_id, started_at, answered_at, ended_at,
                   duration_seconds, recording_url, notes)
-               VALUES ($1,$2,$3::call_direction,$4,$5,$6,$7,$8::call_status,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-               ON CONFLICT (company_id, external_id) DO NOTHING
-               RETURNING id"#,
+               VALUES ($1,$2::call_direction,$3,$4,$5,$6,$7::call_status,$8,$9,$10,$11,$12,$13,$14,$15,$16)"#,
         )
-        .bind(c.id).bind(c.company_id).bind(c.direction).bind(c.from_number).bind(c.to_number)
+        .bind(c.id).bind(c.direction).bind(c.from_number).bind(c.to_number)
         .bind(c.party_id).bind(c.agent_id).bind(c.status).bind(c.external_id)
         .bind(c.subject_type).bind(c.subject_id).bind(c.started_at).bind(c.answered_at).bind(c.ended_at)
         .bind(c.duration_seconds).bind(c.recording_url).bind(c.notes)
-        .fetch_optional(conn)
+        .execute(conn)
         .await
+        .map(|_| ())
     }
 
     /// Attach a live call to what it concerns. Returns rows affected (0 = no such live call in scope).
     ///
-    /// ID-only: no company argument. Runs `execute_scoped`, so it rides a connection carrying the
-    /// caller's `app.company_id` and another company's call simply is not matched. A non-request
-    /// caller (event/job) must wrap this in `with_company_scope(Some(company_id))` or it fails closed.
+    /// Runs `execute_scoped`, so it rides the request-dedicated connection when the composing service
+    /// bound one — under a decorated deployment another unit's call simply is not matched. With no
+    /// scope bound this is a plain pool execute.
     pub async fn update_subject(
         &self,
         pool: &PgPool,
@@ -148,14 +156,17 @@ impl CallRepository {
         subject_type: &str,
         subject_id: Uuid,
     ) -> Result<u64, sqlx::Error> {
-        let done = company_scope::execute_scoped(
+        let done = backbone_orm::org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"UPDATE telephony.calls SET subject_type=$2, subject_id=$3
                    WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(call_id).bind(subject_type).bind(subject_id),
-        ).await?;
+            .bind(call_id)
+            .bind(subject_type)
+            .bind(subject_id),
+        )
+        .await?;
         Ok(done.rows_affected())
     }
 }

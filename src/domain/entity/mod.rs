@@ -40,9 +40,9 @@ pub trait Entity: Debug + Clone {
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 #[cfg(feature = "openapi")]
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// Audit metadata stored as JSONB in the database
 ///

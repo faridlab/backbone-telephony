@@ -8,9 +8,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::Router;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 // Backbone framework imports
 use backbone_core::http::BackboneCrudHandler;
@@ -22,12 +22,11 @@ use backbone_auth::middleware::AuthContext;
 use backbone_auth::AuthMiddleware;
 
 // Domain imports
-use crate::domain::entity::*;
 use crate::application::service::{CallService, ServiceError};
+use crate::domain::entity::*;
 
 // DTO imports
-use crate::presentation::dto::{CreateCallDto, UpdateCallDto, PatchCallDto, CallResponseDto};
-
+use crate::presentation::dto::{CallResponseDto, CreateCallDto, PatchCallDto, UpdateCallDto};
 
 /// Application error type
 #[derive(Debug, thiserror::Error)]
@@ -110,8 +109,7 @@ impl axum::response::IntoResponse for CallError {
 /// ```
 pub fn create_call_routes(service: Arc<CallService>) -> Router {
     BackboneCrudHandler::<CallService, Call, CreateCallDto, UpdateCallDto, CallResponseDto>::routes(
-        service,
-        "/calls",
+        service, "/calls",
     )
 }
 
@@ -159,31 +157,35 @@ pub fn create_protected_call_routes<A: AuthMiddleware + Send + Sync + 'static>(
     use axum::response::IntoResponse;
 
     let auth_layer = auth.clone();
-    create_call_routes(service)
-        .layer(middleware::from_fn(move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+    create_call_routes(service).layer(middleware::from_fn(
+        move |mut req: axum::extract::Request, next: axum::middleware::Next| {
             let auth = auth_layer.clone();
             async move {
-                let token = req.headers()
+                let token = req
+                    .headers()
                     .get(axum::http::header::AUTHORIZATION)
                     .and_then(|h| h.to_str().ok())
-                    .and_then(|raw| raw.strip_prefix("Bearer ").or_else(|| raw.strip_prefix("bearer ")))
+                    .and_then(|raw| {
+                        raw.strip_prefix("Bearer ")
+                            .or_else(|| raw.strip_prefix("bearer "))
+                    })
                     .unwrap_or("");
                 match auth.authenticate(token).await {
                     Ok(ctx) => {
                         req.extensions_mut().insert(ctx);
                         next.run(req).await
                     }
-                    Err(_) => {
-                        (axum::http::StatusCode::UNAUTHORIZED,
-                         axum::Json(serde_json::json!({
-                             "success": false,
-                             "error": "unauthorized",
-                             "message": "Authentication required"
-                         }))
-                        ).into_response()
-                    }
+                    Err(_) => (
+                        axum::http::StatusCode::UNAUTHORIZED,
+                        axum::Json(serde_json::json!({
+                            "success": false,
+                            "error": "unauthorized",
+                            "message": "Authentication required"
+                        })),
+                    )
+                        .into_response(),
                 }
             }
-        }))
+        },
+    ))
 }
-

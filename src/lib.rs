@@ -18,12 +18,12 @@
 #![allow(unused_imports)]
 
 // Generated modules
-pub mod domain;
-pub mod infrastructure;
 pub mod application;
+pub mod domain;
+pub mod exports;
+pub mod infrastructure;
 pub mod presentation;
 pub mod seeders;
-pub mod exports;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -37,11 +37,13 @@ pub use application::service::CallService;
 // Re-exports - Workflows
 pub use application::workflows::*;
 
-use std::sync::Arc;
+// <<< CUSTOM
+// Types the hand-authored module wiring below (validated write surface) references.
+use application::service::{LoggingSink, TelephonyEventSink, TelephonyWriteService};
+// END CUSTOM
 use axum::Router;
 use sqlx::PgPool;
-
-use application::service::{LoggingSink, TelephonyEventSink, TelephonyWriteService};
+use std::sync::Arc;
 
 /// Telephony module configuration
 ///
@@ -75,19 +77,21 @@ impl TelephonyModule {
     /// dependents. Prefer a guarded composition (read + validated writes) for any
     /// real deployment; use this only in trusted/admin/seeding contexts.
     pub fn all_crud_routes(&self) -> Router {
-        use presentation::http::{
-            create_call_routes,
-        };
+        use presentation::http::create_call_routes;
 
-        Router::new()
-            .merge(create_call_routes(self.call_service.clone()))
+        Router::new().merge(create_call_routes(self.call_service.clone()))
     }
 
-    /// The default surface — equivalent to [`Self::validated_routes`]: read-only base merged with
-    /// the validated write path (CDR ingest + subject link). Generic mutation can't reach here.
-    /// For the explicit unguarded admin/seeding surface, call [`Self::all_crud_routes`].
+    /// Deprecated alias for [`Self::all_crud_routes`]. `routes()` reads like
+    /// "the routes" but mounts UNVALIDATED generic CRUD on every entity — a naive
+    /// mount exposes unguarded writes. Compose a guarded router (read + validated
+    /// writes) for production, or call `all_crud_routes()` to opt into the full
+    /// unguarded surface explicitly.
+    #[deprecated(
+        note = "mounts unvalidated generic CRUD; prefer readonly_routes() + validated writes, or all_crud_routes() for the full/unguarded surface"
+    )]
     pub fn routes(&self) -> Router {
-        self.validated_routes()
+        self.all_crud_routes()
     }
 
     /// Read-only routes for every entity (GET endpoints only) — the safe base.
@@ -96,19 +100,17 @@ impl TelephonyModule {
     /// validated write service's invariants. Use this as the production base and
     /// merge validated write routes (or a write service's HTTP layer) onto it.
     pub fn readonly_routes(&self) -> Router {
-        use presentation::http::{
-            create_call_read_routes,
-        };
+        use presentation::http::create_call_read_routes;
 
-        Router::new()
-            .merge(create_call_read_routes(self.call_service.clone()))
+        Router::new().merge(create_call_read_routes(self.call_service.clone()))
     }
 
     // <<< CUSTOM METHODS
     /// The production surface: read-only base (`GET /calls…`) merged with the validated write
     /// path (`POST /calls` CDR ingest, `POST /calls/:id/link` subject attach). Generic mutation
-    /// cannot reach here, so the CDR dedup, outbox event, subject link, and `company_id`/RLS
-    /// fencing (ADR-0008 + ADR-0011) all enforce. Prefer this over `all_crud_routes()`.
+    /// cannot reach here, so the CDR dedup, the outbox event, and the subject link all enforce;
+    /// tenant isolation is whatever fence the composing service installs (ADR-0029). Prefer this
+    /// over `all_crud_routes()`.
     pub fn validated_routes(&self) -> Router {
         use presentation::http::create_telephony_validated_write_routes;
         self.readonly_routes()
@@ -147,9 +149,7 @@ pub struct TelephonyModuleBuilder {
 impl TelephonyModuleBuilder {
     /// Create a new builder
     pub fn new() -> Self {
-        Self {
-            db_pool: None,
-        }
+        Self { db_pool: None }
     }
 
     /// Set the database connection pool
@@ -163,7 +163,8 @@ impl TelephonyModuleBuilder {
 
     /// Build the module with configured dependencies
     pub fn build(self) -> anyhow::Result<TelephonyModule> {
-        let db_pool = self.db_pool
+        let db_pool = self
+            .db_pool
             .ok_or_else(|| anyhow::anyhow!("Database pool not configured"))?;
 
         // Call service
@@ -172,8 +173,9 @@ impl TelephonyModuleBuilder {
 
         // <<< CUSTOM
         // Validated write engine — the CDR dedup + idempotent insert + subject link + same-tx
-        // outbox event (ADR-0008 + ADR-0011). The in-process sink defaults to LoggingSink; the
-        // durable path is the outbox, so this default is safe for single-process composition.
+        // outbox event (the outbox record stays company-keyed per ADR-0011). The in-process sink
+        // defaults to LoggingSink; the durable path is the outbox, so this default is safe for
+        // single-process composition.
         let write_service = Arc::new(TelephonyWriteService::new(db_pool.clone()));
         let event_sink: Arc<dyn TelephonyEventSink> = Arc::new(LoggingSink);
         // END CUSTOM

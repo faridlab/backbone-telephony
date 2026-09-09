@@ -5,10 +5,10 @@
 //! These DTOs are the ONLY types other modules should use.
 //! They are decoupled from internal domain entities.
 
+use crate::domain::entity::*;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use crate::domain::entity::*;
 
 // ============================================================================
 // CALL TYPES
@@ -48,7 +48,6 @@ impl From<CallId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CallDto {
     pub id: CallId,
-    pub company_id: Uuid,
     pub direction: CallDirection,
     pub from_number: String,
     pub to_number: String,
