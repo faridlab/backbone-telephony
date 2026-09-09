@@ -2,9 +2,10 @@
 # Domain: Telephony
 # Entity: Call
 # Description: A call detail record (CDR) against a party — a communication-adjacent log. A provider posts
-# the call (a webhook, at-least-once) and it is DEDUPED on (company, external_id); its outcome + duration
-# are recorded, it is linked to what it concerns (a lead/issue) via a polymorphic logical reference, and a
-# `CallLogged` (or `MissedCall`) event is published for CRM/support to attach a callback/note. Posts NO GL.
+# the call (a webhook, at-least-once) and it is DEDUPED on external_id within whatever fence the composing
+# service installs (ADR-0029); its outcome + duration are recorded, it is linked to what it concerns (a
+# lead/issue) via a polymorphic logical reference, and a `CallLogged` (or `MissedCall`) event is published
+# for CRM/support to attach a callback/note. Posts NO GL.
 # =============================================================================
 
 models:
@@ -16,10 +17,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique call id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Org owner # logical FK to organization.Company.id"
       direction:
         type: CallDirection
         attributes: ["@required"]
@@ -47,7 +44,7 @@ models:
       external_id:
         type: string?
         attributes: ["@length(max=200)", "@exclude_from_foreign_key_check"]
-        description: "Provider CDR id — dedups the provider webhook"
+        description: "Provider CDR id — dedups the provider webhook (unique per deployment scope; the composing service's tenancy descriptor installs the per-unit unique — ADR-0029)"
       subject_type:
         type: string?
         attributes: ["@length(max=60)"]
@@ -83,12 +80,9 @@ models:
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
-      # Provider CDR ids are unique per company — the dedup guard (NULLs distinct, so a manually-logged
-      # call without a provider id never collides).
-      - type: unique
-        fields: [company_id, external_id]
-      - type: index
-        fields: [company_id, party_id]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The former (company_id,
+      # external_id) dedup unique was deployment posture, not domain — the composing service's
+      # tenancy descriptor installs the per-unit external_id unique; nothing is declared here.
       - type: index
         fields: [subject_type, subject_id]
       - type: index
