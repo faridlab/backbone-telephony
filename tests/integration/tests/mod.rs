@@ -9,5 +9,5 @@ pub mod crud_test_base;
 pub mod call_api_test;
 
 // Re-exports for convenience
-pub use crud_test_base::*;
 pub use call_api_test::*;
+pub use crud_test_base::*;
