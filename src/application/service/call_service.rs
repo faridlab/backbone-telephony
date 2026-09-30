@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
+use crate::presentation::dto::{CreateCallDto, UpdateCallDto};
 use crate::domain::entity::Call;
 use crate::infrastructure::persistence::CallRepository;
-use crate::presentation::dto::{CreateCallDto, UpdateCallDto};
 
 /// Application service for Call entities.
 ///
@@ -25,7 +25,12 @@ use crate::presentation::dto::{CreateCallDto, UpdateCallDto};
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type CallService = GenericCrudService<Call, CreateCallDto, UpdateCallDto, CallRepository>;
+pub type CallService = GenericCrudService<
+    Call,
+    CreateCallDto,
+    UpdateCallDto,
+    CallRepository,
+>;
 
 // <<< CUSTOM
 // END CUSTOM

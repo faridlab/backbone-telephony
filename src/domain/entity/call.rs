@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use super::AuditMetadata;
 use super::CallDirection;
 use super::CallStatus;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for Call
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -13,15 +13,9 @@ use super::CallStatus;
 pub struct CallId(pub Uuid);
 
 impl CallId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for CallId {
@@ -38,28 +32,20 @@ impl std::str::FromStr for CallId {
 }
 
 impl From<Uuid> for CallId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<CallId> for Uuid {
-    fn from(id: CallId) -> Self {
-        id.0
-    }
+    fn from(id: CallId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for CallId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for CallId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -92,14 +78,7 @@ impl Call {
     }
 
     /// Create a new Call with required fields
-    pub fn new(
-        direction: CallDirection,
-        from_number: String,
-        to_number: String,
-        status: CallStatus,
-        started_at: DateTime<Utc>,
-        duration_seconds: i32,
-    ) -> Self {
+    pub fn new(direction: CallDirection, from_number: String, to_number: String, status: CallStatus, started_at: DateTime<Utc>, duration_seconds: i32) -> Self {
         Self {
             id: Uuid::new_v4(),
             direction,
@@ -176,6 +155,7 @@ impl Call {
         &self.status
     }
 
+
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -243,79 +223,49 @@ impl Call {
         for (key, value) in fields {
             match key.as_str() {
                 "direction" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.direction = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.direction = v; }
                 }
                 "from_number" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.from_number = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.from_number = v; }
                 }
                 "to_number" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.to_number = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.to_number = v; }
                 }
                 "party_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.party_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.party_id = v; }
                 }
                 "agent_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.agent_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.agent_id = v; }
                 }
                 "status" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.status = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 "external_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.external_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.external_id = v; }
                 }
                 "subject_type" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.subject_type = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.subject_type = v; }
                 }
                 "subject_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.subject_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.subject_id = v; }
                 }
                 "started_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.started_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.started_at = v; }
                 }
                 "answered_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.answered_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.answered_at = v; }
                 }
                 "ended_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.ended_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.ended_at = v; }
                 }
                 "duration_seconds" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.duration_seconds = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.duration_seconds = v; }
                 }
                 "recording_url" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.recording_url = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.recording_url = v; }
                 }
                 "notes" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.notes = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.notes = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -376,6 +326,9 @@ impl backbone_orm::EntityRepoMeta for Call {
         m.insert("subject_id".to_string(), "uuid".to_string());
         m.insert("direction".to_string(), "call_direction".to_string());
         m.insert("status".to_string(), "call_status".to_string());
+        m.insert("started_at".to_string(), "timestamptz".to_string());
+        m.insert("answered_at".to_string(), "timestamptz".to_string());
+        m.insert("ended_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -501,15 +454,9 @@ impl CallBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Call, String> {
-        let direction = self
-            .direction
-            .ok_or_else(|| "direction is required".to_string())?;
-        let from_number = self
-            .from_number
-            .ok_or_else(|| "from_number is required".to_string())?;
-        let to_number = self
-            .to_number
-            .ok_or_else(|| "to_number is required".to_string())?;
+        let direction = self.direction.ok_or_else(|| "direction is required".to_string())?;
+        let from_number = self.from_number.ok_or_else(|| "from_number is required".to_string())?;
+        let to_number = self.to_number.ok_or_else(|| "to_number is required".to_string())?;
 
         Ok(Call {
             id: Uuid::new_v4(),

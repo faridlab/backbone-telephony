@@ -5,7 +5,13 @@
 //! DDD Repository traits - define persistence contracts for aggregates.
 //! Implementations should be in the infrastructure layer.
 
+
 pub mod call_repository;
 
 // Re-exports
-pub use call_repository::{CallFilter, CallPaginatedResult, CallPaginationParams, CallRepository};
+pub use call_repository::{
+    CallRepository,
+    CallPaginationParams,
+    CallPaginatedResult,
+    CallFilter,
+};

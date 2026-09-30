@@ -5,9 +5,9 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -16,8 +16,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::Call;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::CallDirection;
 use crate::domain::entity::CallStatus;
 
@@ -46,39 +46,23 @@ pub struct CreateCallDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "agent_id")]
     pub agent_id: Option<Uuid>,
     pub status: CallStatus,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "external_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "external_id")]
     pub external_id: Option<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "subject_type"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "subject_type")]
     pub subject_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "subject_id")]
     pub subject_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
     #[serde(alias = "started_at")]
     pub started_at: DateTime<Utc>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "answered_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "answered_at")]
     pub answered_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "ended_at")]
     pub ended_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "duration_seconds")]
     pub duration_seconds: i32,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "recording_url"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "recording_url")]
     pub recording_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
@@ -109,39 +93,23 @@ pub struct UpdateCallDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "agent_id")]
     pub agent_id: Option<Uuid>,
     pub status: CallStatus,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "external_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "external_id")]
     pub external_id: Option<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "subject_type"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "subject_type")]
     pub subject_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "subject_id")]
     pub subject_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
     #[serde(alias = "started_at")]
     pub started_at: DateTime<Utc>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "answered_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "answered_at")]
     pub answered_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "ended_at")]
     pub ended_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "duration_seconds")]
     pub duration_seconds: i32,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "recording_url"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "recording_url")]
     pub recording_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
@@ -199,21 +167,7 @@ pub struct PatchCallDto {
 impl PatchCallDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.direction.is_some()
-            || self.from_number.is_some()
-            || self.to_number.is_some()
-            || self.party_id.is_some()
-            || self.agent_id.is_some()
-            || self.status.is_some()
-            || self.external_id.is_some()
-            || self.subject_type.is_some()
-            || self.subject_id.is_some()
-            || self.started_at.is_some()
-            || self.answered_at.is_some()
-            || self.ended_at.is_some()
-            || self.duration_seconds.is_some()
-            || self.recording_url.is_some()
-            || self.notes.is_some()
+        self.direction.is_some() || self.from_number.is_some() || self.to_number.is_some() || self.party_id.is_some() || self.agent_id.is_some() || self.status.is_some() || self.external_id.is_some() || self.subject_type.is_some() || self.subject_id.is_some() || self.started_at.is_some() || self.answered_at.is_some() || self.ended_at.is_some() || self.duration_seconds.is_some() || self.recording_url.is_some() || self.notes.is_some()
     }
 }
 
@@ -229,10 +183,7 @@ impl PatchCallDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct CallResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
     pub direction: CallDirection,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
