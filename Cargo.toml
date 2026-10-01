@@ -1,8 +1,8 @@
 [package]
 name = "backbone-telephony"
-version = "0.5.15"
+version = "0.5.16"
 edition = "2021"
-description = "Minimal Backbone Framework module skeleton"
+description = "Telephony call log: inbound and outbound call records"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/faridlab/backbone-telephony"
 exclude = [".claude/", ".github/", "graphify-out/"]
