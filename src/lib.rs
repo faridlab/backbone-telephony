@@ -24,6 +24,10 @@ pub mod application;
 pub mod presentation;
 pub mod seeders;
 pub mod exports;
+// <<< CUSTOM MODULES
+// Types the hand-authored module wiring below (validated write surface) references.
+use application::service::{LoggingSink, TelephonyEventSink, TelephonyWriteService};
+// END CUSTOM
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -37,10 +41,6 @@ pub use application::service::CallService;
 // Re-exports - Workflows
 pub use application::workflows::*;
 
-// <<< CUSTOM
-// Types the hand-authored module wiring below (validated write surface) references.
-use application::service::{LoggingSink, TelephonyEventSink, TelephonyWriteService};
-// END CUSTOM
 use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
@@ -148,6 +148,8 @@ impl TelephonyModule {
 /// Builder for TelephonyModule
 pub struct TelephonyModuleBuilder {
     db_pool: Option<PgPool>,
+    // <<< CUSTOM BUILDER FIELDS
+    // END CUSTOM
 }
 
 impl TelephonyModuleBuilder {
@@ -155,6 +157,8 @@ impl TelephonyModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            // <<< CUSTOM BUILDER DEFAULTS
+            // END CUSTOM
         }
     }
 
