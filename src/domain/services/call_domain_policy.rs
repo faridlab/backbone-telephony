@@ -18,5 +18,3 @@ use crate::domain::entity::Call;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type CallDomainPolicy = PermitAllPolicy<Call>;
 
-// <<< CUSTOM
-// END CUSTOM

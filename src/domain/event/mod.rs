@@ -8,5 +8,3 @@ pub mod call_event_handlers;
 pub use call_events::{CallEvent, CallEventPublisher, NoopCallEventPublisher};
 pub use call_event_handlers::CallEventHandler;
 
-// <<< CUSTOM
-// END CUSTOM

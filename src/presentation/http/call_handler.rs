@@ -187,3 +187,4 @@ pub fn create_protected_call_routes<A: AuthMiddleware + Send + Sync + 'static>(
             }
         }))
 }
+

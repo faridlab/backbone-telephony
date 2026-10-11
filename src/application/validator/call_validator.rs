@@ -21,9 +21,5 @@ pub fn call_validator() -> CallValidator {
         .rule(OptionalNotBlank::new("subject_type", |e: &Call| e.subject_type.as_deref()))
         .rule(OptionalNotBlank::new("recording_url", |e: &Call| e.recording_url.as_deref()))
         .rule(OptionalNotBlank::new("notes", |e: &Call| e.notes.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

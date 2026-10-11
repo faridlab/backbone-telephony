@@ -6,5 +6,3 @@ pub mod call_domain_policy;
 
 pub use call_domain_policy::CallDomainPolicy;
 
-// <<< CUSTOM
-// END CUSTOM

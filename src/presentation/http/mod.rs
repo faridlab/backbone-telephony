@@ -7,13 +7,9 @@
 
 pub mod call_handler;
 
-// <<< CUSTOM
-// END CUSTOM
 
 // Re-exports
 pub use call_handler::{create_call_routes, create_call_read_routes, create_call_write_routes};
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

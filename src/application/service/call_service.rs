@@ -32,5 +32,3 @@ pub type CallService = GenericCrudService<
     CallRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -9,5 +9,3 @@ pub mod call_validator;
 
 pub use call_validator::{CallValidator, call_validator};
 
-// <<< CUSTOM
-// END CUSTOM

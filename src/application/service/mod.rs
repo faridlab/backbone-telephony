@@ -9,12 +9,8 @@ pub use error::{ServiceError, ServiceResult};
 
 pub mod call_service;
 
-// <<< CUSTOM
-// END CUSTOM
 
 pub use call_service::CallService;
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

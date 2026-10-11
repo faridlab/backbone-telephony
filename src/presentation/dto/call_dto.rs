@@ -387,7 +387,7 @@ impl backbone_core::ApplyUpdateDto<UpdateCallDto> for Call {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to Call here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+
