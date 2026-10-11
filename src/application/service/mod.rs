@@ -10,14 +10,11 @@ pub use error::{ServiceError, ServiceResult};
 pub mod call_service;
 
 // <<< CUSTOM
-pub mod telephony_events;
-pub mod telephony_write_service;
 // END CUSTOM
 
 pub use call_service::CallService;
 // <<< CUSTOM
-pub use telephony_events::{
-    CallLogged, LoggingSink, MissedCall, TelephonyEvent, TelephonyEventSink,
-};
-pub use telephony_write_service::{CallOutcome, InboundCdr, TelephonyError, TelephonyWriteService};
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");

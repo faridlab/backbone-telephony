@@ -25,9 +25,17 @@ pub mod presentation;
 pub mod seeders;
 pub mod exports;
 // <<< CUSTOM MODULES
-// Types the hand-authored module wiring below (validated write surface) references.
-use application::service::{LoggingSink, TelephonyEventSink, TelephonyWriteService};
 // END CUSTOM
+
+// The module's extension (hand-written; ADR-0031).
+#[path = "lib.ext.rs"]
+mod lib_ext;
+pub use lib_ext::*;
+/// This crate's module and builder under fixed names, for the extension's `impl` blocks.
+#[allow(dead_code)]
+pub(crate) type ThisModule = TelephonyModule;
+#[allow(dead_code)]
+pub(crate) type ThisModuleBuilder = TelephonyModuleBuilder;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -59,10 +67,31 @@ use sqlx::PgPool;
 /// ```
 pub struct TelephonyModule {
     pub(crate) call_service: Arc<CallService>,
+    /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    pub(crate) ext: ModuleExt,
     // <<< CUSTOM FIELDS
-    pub(crate) write_service: Arc<TelephonyWriteService>,
-    pub(crate) event_sink: Arc<dyn TelephonyEventSink>,
     // END CUSTOM
+}
+
+impl std::ops::Deref for TelephonyModule {
+    type Target = ModuleExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for TelephonyModule {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
+}
+
+/// What the extension's `build` hook receives from the generated build (ADR-0031).
+#[allow(dead_code)]
+pub(crate) struct ModuleParts<'a> {
+    pub(crate) db_pool: &'a PgPool,
+    pub(crate) call_service: &'a Arc<CallService>,
+    pub(crate) call_repository: &'a Arc<CallRepository>,
 }
 
 impl TelephonyModule {
@@ -110,46 +139,29 @@ impl TelephonyModule {
     }
 
     // <<< CUSTOM METHODS
-    /// The production surface: read-only base (`GET /calls…`) merged with the validated write
-    /// path (`POST /calls` CDR ingest, `POST /calls/:id/link` subject attach). Generic mutation
-    /// cannot reach here, so the CDR dedup, the outbox event, and the subject link all enforce;
-    /// tenant isolation is whatever fence the composing service installs (ADR-0029). Prefer this
-    /// over `all_crud_routes()`.
-    pub fn validated_routes(&self) -> Router {
-        use presentation::http::create_telephony_validated_write_routes;
-        self.readonly_routes()
-            .merge(create_telephony_validated_write_routes(
-                self.write_service.clone(),
-                self.event_sink.clone(),
-            ))
-    }
-
-    /// Override the in-process event sink (default is `LoggingSink`). The durable path is the
-    /// transactional outbox staged inside `record_call`; this sink is only a low-fanout notify,
-    /// so the default is safe for single-process composition — supply a bus-backed sink for
-    /// fan-out to multiple consumers.
-    pub fn with_event_sink(mut self, sink: Arc<dyn TelephonyEventSink>) -> Self {
-        self.event_sink = sink;
-        self
-    }
-
-    /// The validated CDR write service (dedup + idempotent insert + subject link + outbox).
-    pub fn write_service(&self) -> &Arc<TelephonyWriteService> {
-        &self.write_service
-    }
-
-    /// The in-process event sink the validated write path publishes to.
-    pub fn event_sink(&self) -> &Arc<dyn TelephonyEventSink> {
-        &self.event_sink
-    }
     // END CUSTOM
 }
 
 /// Builder for TelephonyModule
 pub struct TelephonyModuleBuilder {
     db_pool: Option<PgPool>,
+    /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    ext: ModuleBuilderExt,
     // <<< CUSTOM BUILDER FIELDS
     // END CUSTOM
+}
+
+impl std::ops::Deref for TelephonyModuleBuilder {
+    type Target = ModuleBuilderExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for TelephonyModuleBuilder {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
 }
 
 impl TelephonyModuleBuilder {
@@ -157,6 +169,7 @@ impl TelephonyModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            ext: Default::default(),
             // <<< CUSTOM BUILDER DEFAULTS
             // END CUSTOM
         }
@@ -181,19 +194,19 @@ impl TelephonyModuleBuilder {
         let call_service = Arc::new(CallService::with_repository(call_repository.clone()));
 
         // <<< CUSTOM
-        // Validated write engine — the CDR dedup + idempotent insert + subject link + same-tx
-        // outbox event (the outbox record stays company-keyed per ADR-0011). The in-process sink
-        // defaults to LoggingSink; the durable path is the outbox, so this default is safe for
-        // single-process composition.
-        let write_service = Arc::new(TelephonyWriteService::new(db_pool.clone()));
-        let event_sink: Arc<dyn TelephonyEventSink> = Arc::new(LoggingSink);
         // END CUSTOM
+
+        // The extension builds its own state from what the generated build made.
+        let ext = self.ext.build(&ModuleParts {
+            db_pool: &db_pool,
+            call_service: &call_service,
+            call_repository: &call_repository,
+        })?;
 
         Ok(TelephonyModule {
             call_service,
+            ext,
             // <<< CUSTOM
-            write_service,
-            event_sink,
             // END CUSTOM
         })
     }
@@ -204,3 +217,6 @@ impl Default for TelephonyModuleBuilder {
         Self::new()
     }
 }
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");

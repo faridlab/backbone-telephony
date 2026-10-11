@@ -8,9 +8,6 @@ mod call_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
-// The hand-written Call SQL's parameter/projection types (see `call_repository`, which is declared
-// `user_owned` in metaphor.codegen.yaml).
-pub use call_repository::{CallOutcomeRow, NewCallRow};
 // END CUSTOM
 
 // Re-exports
@@ -26,3 +23,6 @@ pub use backbone_orm::repository::{
 // Re-export custom persistence types
 // <<< CUSTOM
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");

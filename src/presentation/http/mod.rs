@@ -8,11 +8,12 @@
 pub mod call_handler;
 
 // <<< CUSTOM
-pub mod telephony_write_handler;
 // END CUSTOM
 
 // Re-exports
 pub use call_handler::{create_call_routes, create_call_read_routes, create_call_write_routes};
 // <<< CUSTOM
-pub use telephony_write_handler::create_telephony_validated_write_routes;
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");
