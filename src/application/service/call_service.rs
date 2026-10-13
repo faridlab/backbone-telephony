@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<Call> for CallRowRules {
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `from_number_required` (@required on Call.from_number)
         if (create || (update && r::changed(old.as_ref(), row, &["from_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "from_number")), r::not(r::is_empty(r::trim(r::field(row, "from_number")))))) {
@@ -64,7 +64,7 @@ impl backbone_core::write_guard::WriteGuard<Call> for CallRowRules {
         }
         // `from_number_max_length` (@length(max=40) on Call.from_number)
         if (create || (update && r::changed(old.as_ref(), row, &["from_number"]))) && !r::holds(&r::le(r::length(r::field(row, "from_number")), r::Val::Num(40.0_f64))) {
-            shadow.push(Violation::new("from_number", "max_length", "from_number must be at most 40 characters").with_param("max", 40_i64));
+            refuse.push(Violation::new("from_number", "max_length", "from_number must be at most 40 characters").with_param("max", 40_i64));
         }
         // `to_number_required` (@required on Call.to_number)
         if (create || (update && r::changed(old.as_ref(), row, &["to_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "to_number")), r::not(r::is_empty(r::trim(r::field(row, "to_number")))))) {
@@ -72,23 +72,23 @@ impl backbone_core::write_guard::WriteGuard<Call> for CallRowRules {
         }
         // `to_number_max_length` (@length(max=40) on Call.to_number)
         if (create || (update && r::changed(old.as_ref(), row, &["to_number"]))) && !r::holds(&r::le(r::length(r::field(row, "to_number")), r::Val::Num(40.0_f64))) {
-            shadow.push(Violation::new("to_number", "max_length", "to_number must be at most 40 characters").with_param("max", 40_i64));
+            refuse.push(Violation::new("to_number", "max_length", "to_number must be at most 40 characters").with_param("max", 40_i64));
         }
         // `external_id_max_length` (@length(max=200) on Call.external_id)
         if (create || (update && r::changed(old.as_ref(), row, &["external_id"]))) && !r::holds(&r::le(r::length(r::field(row, "external_id")), r::Val::Num(200.0_f64))) {
-            shadow.push(Violation::new("external_id", "max_length", "external_id must be at most 200 characters").with_param("max", 200_i64));
+            refuse.push(Violation::new("external_id", "max_length", "external_id must be at most 200 characters").with_param("max", 200_i64));
         }
         // `subject_type_max_length` (@length(max=60) on Call.subject_type)
         if (create || (update && r::changed(old.as_ref(), row, &["subject_type"]))) && !r::holds(&r::le(r::length(r::field(row, "subject_type")), r::Val::Num(60.0_f64))) {
-            shadow.push(Violation::new("subject_type", "max_length", "subject_type must be at most 60 characters").with_param("max", 60_i64));
+            refuse.push(Violation::new("subject_type", "max_length", "subject_type must be at most 60 characters").with_param("max", 60_i64));
         }
         // `recording_url_max_length` (@length(max=500) on Call.recording_url)
         if (create || (update && r::changed(old.as_ref(), row, &["recording_url"]))) && !r::holds(&r::le(r::length(r::field(row, "recording_url")), r::Val::Num(500.0_f64))) {
-            shadow.push(Violation::new("recording_url", "max_length", "recording_url must be at most 500 characters").with_param("max", 500_i64));
+            refuse.push(Violation::new("recording_url", "max_length", "recording_url must be at most 500 characters").with_param("max", 500_i64));
         }
         // `notes_max_length` (@length(max=2000) on Call.notes)
         if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(2000.0_f64))) {
-            shadow.push(Violation::new("notes", "max_length", "notes must be at most 2000 characters").with_param("max", 2000_i64));
+            refuse.push(Violation::new("notes", "max_length", "notes must be at most 2000 characters").with_param("max", 2000_i64));
         }
         GuardOutcome { refuse, shadow }
     }
