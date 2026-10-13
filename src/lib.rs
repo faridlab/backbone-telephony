@@ -179,7 +179,7 @@ impl TelephonyModuleBuilder {
 
         // Call service
         let call_repository = Arc::new(CallRepository::new(db_pool.clone()));
-        let call_service = Arc::new(CallService::with_repository(call_repository.clone()));
+        let call_service = Arc::new(CallService::with_repository(call_repository.clone()).with_guard(Arc::new(crate::application::service::CallRowRules)));
 
 
         // The extension builds its own state from what the generated build made.

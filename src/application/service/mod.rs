@@ -11,6 +11,7 @@ pub mod call_service;
 
 
 pub use call_service::CallService;
+pub use call_service::CallRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");
