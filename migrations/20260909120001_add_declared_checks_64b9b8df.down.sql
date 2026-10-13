@@ -1,0 +1,9 @@
+-- Down: drop the declared rule constraints for telephony module
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_notes_max_length__max_length;
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_recording_url_max_length__max_length;
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_subject_type_max_length__max_length;
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_external_id_max_length__max_length;
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_to_number_max_length__max_length;
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_to_number_required__required;
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_from_number_max_length__max_length;
+ALTER TABLE IF EXISTS telephony.calls DROP CONSTRAINT IF EXISTS ck_calls_from_number_required__required;
