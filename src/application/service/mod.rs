@@ -13,5 +13,13 @@ pub mod call_service;
 pub use call_service::CallService;
 pub use call_service::CallRowRules;
 
+/// A `CallService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_call_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::CallRepository>,
+) -> CallService {
+    CallService::with_repository(repository).with_guard(std::sync::Arc::new(CallRowRules))
+}
+
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");
