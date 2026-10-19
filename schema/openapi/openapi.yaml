@@ -466,10 +466,6 @@ components:
         - direction
         - from_number
         - to_number
-        - status
-        - started_at
-        - duration_seconds
-        - metadata
       properties:
         direction:
           type: string
@@ -517,8 +513,6 @@ components:
         notes:
           nullable: true
           type: string
-        metadata:
-          type: object
 
     UpdateCallRequest:
       type: object
@@ -529,7 +523,6 @@ components:
         - status
         - started_at
         - duration_seconds
-        - metadata
       properties:
         direction:
           type: string
@@ -577,8 +570,6 @@ components:
         notes:
           nullable: true
           type: string
-        metadata:
-          type: object
 
     PatchCallRequest:
       type: object
@@ -629,8 +620,6 @@ components:
         notes:
           nullable: true
           type: string
-        metadata:
-          type: object
 
     CallList:
       type: object

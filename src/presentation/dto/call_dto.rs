@@ -41,6 +41,7 @@ pub struct CreateCallDto {
     pub party_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "agent_id")]
     pub agent_id: Option<Uuid>,
+    #[serde(default = "default_create_call_status")]
     pub status: CallStatus,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "external_id")]
     pub external_id: Option<String>,
@@ -49,19 +50,27 @@ pub struct CreateCallDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "subject_id")]
     pub subject_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
-    #[serde(alias = "started_at")]
+    #[serde(default = "default_create_call_started_at", alias = "started_at")]
     pub started_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "answered_at")]
     pub answered_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "ended_at")]
     pub ended_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "duration_seconds")]
+    #[serde(default, alias = "duration_seconds")]
     pub duration_seconds: i32,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "recording_url")]
     pub recording_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+}
+
+fn default_create_call_status() -> CallStatus {
+    CallStatus::Ringing
+}
+
+fn default_create_call_started_at() -> DateTime<Utc> {
+    Utc::now()
 }
 
 // =============================================================================
@@ -130,32 +139,32 @@ pub struct PatchCallDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "to_number")]
     pub to_number: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "party_id")]
-    pub party_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "agent_id")]
-    pub agent_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "party_id")]
+    pub party_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "agent_id")]
+    pub agent_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<CallStatus>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "external_id")]
-    pub external_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "subject_type")]
-    pub subject_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "subject_id")]
-    pub subject_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "external_id")]
+    pub external_id: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "subject_type")]
+    pub subject_type: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "subject_id")]
+    pub subject_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "started_at")]
     pub started_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "answered_at")]
-    pub answered_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "ended_at")]
-    pub ended_at: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "answered_at")]
+    pub answered_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "ended_at")]
+    pub ended_at: Option<Option<DateTime<Utc>>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "duration_seconds")]
     pub duration_seconds: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "recording_url")]
-    pub recording_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "recording_url")]
+    pub recording_url: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub notes: Option<Option<String>>,
 }
 
 impl PatchCallDto {
@@ -376,12 +385,4 @@ impl backbone_core::ApplyUpdateDto<UpdateCallDto> for Call {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Call here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 
